@@ -95,12 +95,21 @@ type Request struct {
  * ditto
  */
 func Ditto(request Request, headers []HEADER) {
-	log.Println("Ditto开始,并发数：%v循环%v", request.Concurrency, request.Loop)
+	log.Println("Ditto开始,并发数：%v循环:%v", request.Concurrency, request.Loop)
 	log.Println(request)
 	log.Println(headers)
 	// 创建等待组，以便在所有协程完成后退出程序
 	var wg sync.WaitGroup
 	wg.Add(request.Concurrency)
+
+	// 创建HTTP请求客户端
+	client := &http.Client{
+		Transport: &http.Transport{
+			MaxIdleConns:        1000,
+			MaxIdleConnsPerHost: 1000,
+		},
+		Timeout: 10 * time.Second,
+	}
 
 	// 创建指定数量的并发协程
 	for i := 0; i < request.Concurrency; i++ {
@@ -108,26 +117,21 @@ func Ditto(request Request, headers []HEADER) {
 			defer wg.Done()
 
 			for loop := 0; loop < request.Loop; loop++ {
-				// 创建HTTP请求客户端
-				client := &http.Client{
-					Timeout: 10 * time.Second,
-				}
-
-				// 创建HTTP请求
+				// 复用HTTP请求
 				req, err := http.NewRequest(request.Method, request.Url, strings.NewReader(request.RequestBody))
-
-				if err != nil {
-					log.Printf("Failed to create request: %v\n", err)
-					return
-				}
 
 				// 设置请求头
 				for _, header := range headers {
 					req.Header.Set(header.Key, header.Value)
 				}
+				if err != nil {
+					log.Printf("Failed to create request: %v\n", err)
+					return
+				}
 
 				// 发送HTTP请求
 				resp, err := client.Do(req)
+
 				if err != nil {
 					log.Printf("Failed to send request: %v\n", err)
 					return
@@ -150,5 +154,5 @@ func Ditto(request Request, headers []HEADER) {
 	}
 
 	// 不等待所有协程完成
-	// wg.Wait()
+	wg.Wait()
 }
