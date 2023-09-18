@@ -143,10 +143,10 @@ func Ditto(request Request, headers []HEADER) {
 				// 	return
 				// }
 
-				// fmt.Println("Response Body:", string(body))
+				fmt.Println("Response Body:", resp.Header)
 
 				// 确保响应正常关闭
-				resp.Body.Close()
+				defer resp.Body.Close()
 
 				// 可以根据需要在这里处理响应，例如检查状态码、读取响应体等
 			}

@@ -1,5 +1,10 @@
 <template>
   <el-form :model="form">
+    <el-row justify="center" style="padding-bottom: 10px">
+      <el-button @click="centerDialogVisible = true">
+        Copy from cURL
+      </el-button>
+    </el-row>
     <el-form-item>
       <div class="mt-4">
         <el-input
@@ -84,14 +89,36 @@
         </el-tab-pane>
       </el-tabs>
     </el-form-item>
+    <el-dialog
+      v-model="centerDialogVisible"
+      title="Import from cURL"
+      width="30%"
+      center
+    >
+      <el-input
+        v-model="cUrlData"
+        placeholder="Please input"
+        show-word-limit
+        type="textarea"
+      />
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="centerDialogVisible = false">Cancel</el-button>
+          <el-button type="primary" @click="cUrlImportFunc">
+            Confirm
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
   </el-form>
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
 import { reactive, ref } from "vue";
+import curlParse from "./curl_converter.js";
 import axios from "axios";
 import type { TabsPaneContext } from "element-plus";
-import { Promotion } from "@element-plus/icons-vue";
+import { Promotion, DocumentAdd } from "@element-plus/icons-vue";
 
 const activeName = ref("first");
 
@@ -99,6 +126,25 @@ const handleClick = (tab: TabsPaneContext, event: Event) => {
   console.log(tab, event);
 };
 
+const cUrlImportFunc = () => {
+  var curlObject = curlParse(cUrlData.value);
+  if (curlObject == null) {
+    return;
+  }
+  var headers = Object.entries(curlObject.header).filter(
+    (item) => item[0] != "Content-Type"
+  );
+
+  form.url = curlObject.url;
+  form.body = curlObject.body.replace(/\\/g, "");
+  form.headers = headers.map((it) => {
+    return { id: id.value++, key: it[0], value: it[1] };
+  });
+  centerDialogVisible.value = false;
+};
+
+const centerDialogVisible = ref(false);
+const cUrlData = ref("");
 const id = ref(0);
 const form = reactive({
   method: "POST",
@@ -165,3 +211,9 @@ const onAddItem = () => {
   });
 };
 </script>
+
+<style scoped>
+.dialog-footer button:first-child {
+  margin-right: 10px;
+}
+</style>
